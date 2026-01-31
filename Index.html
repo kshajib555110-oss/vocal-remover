@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Batch Vocal Remover PRO</title>
+</head>
+<body>
+
+<h2>Batch Vocal Remover (PRO)</h2>
+
+<select id="task">
+  <option value="instrumentals">Instrumentals</option>
+  <option value="multi_stem">Multi Stem</option>
+  <option value="lead_vocals">Lead Vocals</option>
+  <option value="denoise">Denoise</option>
+  <option value="vr230706">Hybrid</option>
+</select>
+
+<br><br>
+<input type="file" id="files" multiple />
+<br><br>
+
+<button onclick="start()">Start</button>
+<ul id="list"></ul>
+
+<script>
+async function start() {
+  const files = document.getElementById("files").files;
+  const task = document.getElementById("task").value;
+  const list = document.getElementById("list");
+  list.innerHTML = "";
+
+  for (let file of files) {
+    const li = document.createElement("li");
+    li.textContent = file.name + " uploading...";
+    list.appendChild(li);
+
+    const form = new FormData();
+    form.append("file", file);
+    form.append("task", task);
+    form.append("sample", 1);
+
+    const r = await fetch("/api/convert", {
+      method: "POST",
+      body: form
+    });
+
+    const d = await r.json();
+    poll(d.file_conversion.ulid, li, file.name);
+  }
+}
+
+function poll(ulid, li, name) {
+  const t = setInterval(async () => {
+    const r = await fetch(`/api/status?ulid=${ulid}`);
+    const d = await r.json();
+    li.textContent = name + " → " + d.file_conversion.status;
+
+    if (d.file_conversion.status === "completed") {
+      clearInterval(t);
+      li.textContent += " ✅ done";
+    }
+  }, 2000);
+}
+</script>
+
+</body>
+</html>
